@@ -10,8 +10,7 @@ df<- read_csv("D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/Out
 
 # ── 0. Parameters ─────────────────────────────────────────────────────────────
 sim_horizon <- 50
-penalty_primary    <- 50   # primary imputation:  rt = sim_horizon (boundary)
-penalty_sensitivity <- 75  # sensitivity check:   rt = 75 (beyond window)
+
 
 management_colors <- c(
   "ADAPTATION"   = "#E69F00",
@@ -41,8 +40,7 @@ df |>
 # Sensitivity: rt_imp_sens = 75 for non-recoverers
 df <- df |>
   mutate(
-    rt_imp      = if_else(is_censored, as.numeric(penalty_primary),    rt),
-    rt_imp_sens = if_else(is_censored, as.numeric(penalty_sensitivity), rt)
+    rt_imp      = if_else(is_censored, as.numeric(sim_horizon),    rt)
   )
 
 # Quick summary: compare distributions with and without imputation

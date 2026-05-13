@@ -10,8 +10,7 @@ df<- read_csv("D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/Out
 
 # ── 0. Parameters ─────────────────────────────────────────────────────────────
 sim_horizon <- 50
-penalty_primary    <- 50   # primary imputation:  rt = sim_horizon (boundary)
-penalty_sensitivity <- 75  # sensitivity check:   rt = 75 (beyond window)
+
 
 management_colors <- c(
   "ADAPTATION"   = "#E69F00",
@@ -41,111 +40,148 @@ df |>
 # Sensitivity: rt_imp_sens = 75 for non-recoverers
 df <- df |>
   mutate(
-    rt_imp      = if_else(is_censored, as.numeric(penalty_primary),    rt),
-    rt_imp_sens = if_else(is_censored, as.numeric(penalty_sensitivity), rt)
+    rt_imp      = if_else(is_censored, as.numeric(sim_horizon),    rt)
   )
 
-# Quick summary: compare distributions with and without imputation
-cat("\n── rt distribution summary (recovered cases only) ──\n")
-df |> filter(!is_censored) |> summarise(
-  n    = n(),
-  mean = mean(rt),
-  sd   = sd(rt),
-  med  = median(rt),
-  min  = min(rt),
-  max  = max(rt)
-) |> print()
 
-cat("\n── rt_imp distribution summary (all cases, primary imputation) ──\n")
-df |> summarise(
-  n           = n(),
-  n_imputed   = sum(is_censored),
-  mean        = mean(rt_imp),
-  sd          = sd(rt_imp),
-  med         = median(rt_imp),
-  min         = min(rt_imp),
-  max         = max(rt_imp)
-) |> print()
+
+df <- df %>%  mutate(  event = ifelse(is_censored, 0, 1)  )
 
 
 
 
-a<-df %>% select(mgm, model, windcase,rcp, rt_imp, is_censored)
-head(a)
+#-------------------------------------------------------------- SET REFERENCE CASES:
+# For the Cox model need to set baseline which they compare things: 
+# Compared to BAU, how does each management change recovery rate?
+# Compared to REFLCIM, how does each rcp change recovery rate?
 
-df2 <- a %>%  mutate(  event = ifelse(is_censored, 0, 1)  )
+df$mgm <- relevel(as.factor(df$mgm), ref = "BAU")
+df$rcp <- relevel(as.factor(df$rcp), ref = "refclim")
 
-surv_obj <- Surv(  time  = df2$rt_imp,  event = df2$event)
+# the first one here is the reference:
+levels(as.factor(df$mgm))
+levels(as.factor(df$rcp))
+#-------------------------------------------------------------------------------------------
+surv_obj <- Surv( time = df$rt_imp,  event = df$event)
 
-#  MANAGEMENT EFFECT:
 
-km_mgm <- survfit(  surv_obj ~ mgm,  data = df2)
+# --- FIT AN ADDITIVE MODEL:
 
-ggsurvplot(  km_mgm,  data = df2,  risk.table = TRUE,  pval = TRUE,
-  conf.int = TRUE,  xlab = "Years after disturbance",  
-  ylab = "Probability of NOT yet recovering",
-  legend.title = "Management",  ggtheme = theme_bw())
+#This estimates:
+## management effects adjusted for climate
+## climate effects adjusted for management
 
-#  RCP EFFECT:
-km_rcp <- survfit(  surv_obj ~ rcp   ,  data = df2)
-
-ggsurvplot( km_rcp, data = df2, risk.table = TRUE,pval = TRUE,  conf.int = TRUE,
-  xlab = "Years after disturbance",
-  ylab = "Probability of NOT yet recovering",
-  legend.title = "Management",
-  ggtheme = theme_bw() )
+cox1 <- coxph(  surv_obj ~ mgm + rcp ,  data = df)
 
 
 
-
-summary(km_rcp, times = 23)
-# Which recovers faster?
-# Look at t specific year
-
-
-summary(km_mgm, times = 23)
+# --- FIT INTERACTION MODEL
+# Does management effectiveness change under climate change?
+cox2 <- coxph(surv_obj ~ mgm * rcp ,  data = df)
 
 
-km23 <- summary(km_mgm, times = 23)
+summary(cox1)
+summary(cox2)
+
+
+#---- COMAPRE THE MODELS:
+#If interaction improves model substantially → climate modifies management effectiveness.
+#If not → management and climate effects are mostly additive.
+
+AIC(cox1, cox2)
+anova(cox1, cox2, test = "LRT")
+
+# PRoportional hazards assumption Check proportional hazards
+cox.zph(cox2)
+
+
+#Non-significant p-values --> PH assumption OK.
+
+#Significant p-values -->Effects change over time.
+#Ecologically this may mean:  management helps early but not late recovery.
+
+
+#---------------------------- GRAPHICAL OPTIONS:
+
+library(broom)
+
+#--- COX1
+
+hr_df1 <- broom::tidy(cox1, exponentiate = TRUE, conf.int = TRUE)
+ggplot(hr_df1,
+       aes(x = estimate,
+           y = reorder(term, estimate))) +
+  geom_point(size = 3) +
+  geom_errorbarh(aes(xmin = conf.low,      xmax = conf.high),     height = 0.2) +
+  geom_vline(xintercept = 1, linetype = "dashed",        color = "red") +
+  scale_x_log10() +
+  labs(   x = "Hazard ratio (log scale)",   y = "",   title = "Effects on recovery rate") +
+  theme_bw(base_size = 14)
+
+#--- COX2
+hr_df2 <- broom::tidy(cox2, exponentiate = TRUE, conf.int = TRUE)
+ggplot(hr_df2,
+       aes(x = estimate,
+           y = reorder(term, estimate))) +
+  geom_point(size = 3) +
+  geom_errorbarh(aes(xmin = conf.low,    xmax = conf.high),         height = 0.2) +
+  geom_vline(xintercept = 1,       linetype = "dashed",            color = "red") +
+  scale_x_log10() +
+  labs(  x = "Hazard ratio (log scale)",  y = "",   title = "Effects on recovery rate"  ) +
+  theme_bw(base_size = 14)
+
+
+
+
+#-------------------------------------------- Interaction plot
+newdat <- expand.grid(
+  mgm = levels(df$mgm),
+  rcp = levels(df$rcp)
+)
+
+sf <- survfit(cox2, newdata = newdat)
+med <- surv_median(sf)
+med$mgm <- newdat$mgm
+med$rcp <- newdat$rcp
+
+ggplot(med,   aes(x = rcp,           y = median,           color = mgm,           group = mgm)) +
+  geom_point(size = 3) +
+  geom_line(size = 1.2) +
+  
+  scale_color_manual(values = management_colors) +
+  
+  labs(    y = "Predicted recovery time",
+    x = "Climate scenario"
+  ) +
+  
+  theme_bw(base_size = 14)
 
 
 
 
 
 
-
-# CHANGE TO PROBABILITY OF RECOVERY: (fun="event")
-
-ggsurvplot(  km_mgm,  data = df2,  risk.table = TRUE,  pval = TRUE,fun = "event",
-             conf.int = TRUE,  xlab = "Years after disturbance",  
-             ylab = "Probability of recovering",
-             legend.title = "Management",  ggtheme = theme_bw())
+#------------------------------ maybe these are below not meaningful... need to check it
 
 
+sf <- survfit(cox1, newdata = newdat)
+med <- surv_median(sf)
+med$mgm <- newdat$mgm
+med$rcp <- newdat$rcp
 
-ggsurvplot( km_rcp, data = df2, risk.table = TRUE,pval = TRUE,  conf.int = TRUE,fun = "event",
-            xlab = "Years after disturbance",
-            ylab = "Probability of recovering",
-            legend.title = "Management",
-            ggtheme = theme_bw() )
+ggplot(med,   aes(x = rcp,           y = median,           color = mgm,           group = mgm)) +
+  geom_point(size = 3) +
+  geom_line(size = 1.2) +
+  
+  scale_color_manual(values = management_colors) +
+  
+  labs(    y = "Predicted recovery time",
+           x = "Climate scenario"
+  ) +
+  
+  theme_bw(base_size = 14)
 
+#---------- ???For diagnostics, visualize Schoenfeld residuals:
+ph_test <- cox.zph(cox2)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ggcoxzph(ph_test)
