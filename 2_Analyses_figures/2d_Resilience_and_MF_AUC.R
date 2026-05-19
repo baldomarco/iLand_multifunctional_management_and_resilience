@@ -106,13 +106,10 @@ l1<-less %>% filter(is.na(r)==F) %>% group_by(model, rcp, mgm, windcase) %>%
   summarize(auc=auc(year_after_impact,r)) %>% 
   mutate(norm.auc=auc/-5000.)
 
-
+#---------------------MAKE ONE EXAMPLE FOR ONE MODEL AND ONE WIND-->
 example<-l1 %>% filter(model=="NCC_HIRHAM5",windcase=="w8")
 
 pdf(paste0(plotroot, "2d_Resilience_calculation_example_AUC_time_series_coloring.pdf"), height = 6, width = 10)
-
-
-#
 
 less %>%
   filter(model=="NCC_HIRHAM5",windcase=="w8",!is.na(r)) %>%
@@ -152,19 +149,16 @@ less %>%
 
 dev.off()
 
+# MAKE ANOTHER EXAMPLE, WHERE PUT ALL THE RECOVERY TIME, AUC AND IMPACT VALUES ON THE PLOT
 
 
+pdf(paste0(plotroot, "2d_Resilience_calculation_example_AUC_time_series_example_with_values.pdf"), height = 10, width = 10)
 
-pdf(paste0(plotroot, "2d_Resilience_calculation_example_AUC_time_series_coloring2.pdf"), height = 10, width = 10)
+# look the adaptation and w8 case:
 
 example<-l1 %>% filter((mgm=="ADAPTATION"&windcase=="w8"))
-recovery.all1.filtered<-recovery.all1  %>% filter((mgm=="ADAPTATION"&windcase=="w8"))
-rec
 
 example<-left_join(example,rec,by=c("model","rcp","mgm","windcase"))
-
-
-
 
 dsum2<-d %>% filter(year==50) %>% mutate(rel.wind.impact=100*wind/landscape_volume_yearstart) %>%
   select(-year,-barkbeetle,-wind,-landscape_volume_yearstart,-impact,-relimpact)
@@ -174,10 +168,7 @@ example<-left_join(example,dsum2,by=c("model","rcp","mgm","windcase"))
 
 
 
-#
-
 less %>%
- # filter(model=="NCC_HIRHAM5"|model=="refclim",windcase=="w8",!is.na(r)) %>%
   filter((mgm=="ADAPTATION"&windcase=="w8"),!is.na(r)) %>%
   group_by(model, rcp, mgm, windcase) %>%
   arrange(year_after_impact) %>%

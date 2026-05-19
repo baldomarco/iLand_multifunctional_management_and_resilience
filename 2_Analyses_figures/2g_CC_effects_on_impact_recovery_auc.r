@@ -23,11 +23,10 @@ plotroot<-"Figures/"
 
 
 a<-read.csv(paste0(dataroot,"20260421_impact_recoverytime_auc.csv"))
-#b<-read.csv(paste0(dataroot,"Survival_Analysis_K-M_Cox_results.csv"))
-
-c<-read_excel(paste0(dataroot,"20260501_R_proportion_Y28.xlsx"))
+b<-read.csv(paste0(dataroot,"1b_Median_recovery_timings.csv"))
 
 head(b)
+
 
 
 a1<-a %>% select(mgm,model,windcase,rcp,impact,one.minus.norm.auc)
@@ -50,37 +49,38 @@ sumdat <- diff %>%
     q75 = quantile(diff.perc, 0.75, na.rm = TRUE),
     .groups = "drop"
   )
-#---------------- probabilities
-
-c1.long<-c %>% select(Management,Climate,recovery,recovery_upper,recovery_lower) %>%rename(mgm=Management,rcp=Climate,med=recovery,upper=recovery_upper,lower=recovery_lower) %>% mutate(name="recovery.prob")
-
-c1.long.ref<-c1.long %>% filter(rcp=="refclim") %>% select(-rcp) 
+#---------------- median recovery times
 
 
-c1.long.ref2<-pivot_longer(c1.long.ref,cols=c("med", "upper" , "lower"), names_to="stat", values_to="refvalue")
-  
-c1.long.scen<-c1.long %>% filter(rcp!="refclim") 
-c1.long.scen2<-pivot_longer(c1.long.scen,cols=c("med", "upper" , "lower"), names_to="stat", values_to="value")
+sumdat %>% filter(mgm=="ADAPTATION")
+
+b1.long <- b %>% separate(    X,    into = c("tmp", "group"),    sep = "="  ) %>%  
+  select(-tmp) %>%  
+  separate(    group,    into = c("rcp", "management"),    sep = "\\."  ) %>%
+  select(rcp,management,median.ceiling) %>%
+  rename(mgm=management,med=median.ceiling) %>%
+  mutate(name="Est.med.recovery.time")
 
 
-diff2<-left_join(c1.long.scen2,c1.long.ref2, by=c("mgm","stat", "name")) %>% mutate(diff=value-refvalue,
-                                                                                     diff.perc= 100*(value-refvalue)/refvalue)
-diff2 %>%
-  select(mgm,rcp,name,stat,diff.perc) 
+b1.long.ref<-b1.long %>% filter(rcp=="refclim") %>% mutate(refvalue=med)  %>% select(-rcp,-med)
 
-%>%
-  pi
-  summarise(
-    mean_diff = mean(diff.perc, na.rm = TRUE),
-    q25 = quantile(diff.perc, 0.25, na.rm = TRUE),
-    q75 = quantile(diff.perc, 0.75, na.rm = TRUE),
-    .groups = "drop"
-  )
+b1.long.scen<-b1.long %>% filter(rcp!="refclim") %>% mutate(value=med) %>% select(-med)
 
 
 
+diff2<-left_join(b1.long.scen,b1.long.ref, by=c("mgm", "name")) %>% mutate(diff=value-refvalue, diff.perc= 100*(value-refvalue)/refvalue)
 
-ggplot(sumdat, aes(x = name, y = mean_diff, fill = rcp)) +
+diff3<-diff2 %>%  select(mgm,name,rcp,diff.perc) %>% rename(mean_diff=diff.perc) %>% mutate(q25=NA,q75=NA)
+
+
+diff2 %>% filter(mgm=="ADAPTATION")
+
+dim(diff3)
+dim(sumdat)
+
+sumdat<-rbind(sumdat,diff3)
+
+g3<-ggplot(sumdat, aes(x = name, y = mean_diff, fill = rcp)) +
   scale_fill_manual(values=(c( "#5fad56", "#f2c14e")))+
   geom_bar(  stat="identity", position = "dodge")+
   geom_errorbar(
@@ -97,12 +97,14 @@ ggplot(sumdat, aes(x = name, y = mean_diff, fill = rcp)) +
   ) +
   labs(
     x = "Variable",
-    y = "Mean difference",
+    y = "Difference in %",
     fill = "RCP"
   )
 
 
-
+pdf(paste0(plotroot,"2g_Column_graph_perc_diff_rt_impact_res.pdf"), width=10,height=6)
+print(g3)
+dev.off()
 
 
 
