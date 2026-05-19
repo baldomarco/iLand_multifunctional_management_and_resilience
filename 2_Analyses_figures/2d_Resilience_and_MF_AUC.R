@@ -152,6 +152,90 @@ less %>%
 
 dev.off()
 
+
+
+
+pdf(paste0(plotroot, "2d_Resilience_calculation_example_AUC_time_series_coloring2.pdf"), height = 10, width = 10)
+
+example<-l1 %>% filter((mgm=="ADAPTATION"&windcase=="w8"))
+recovery.all1.filtered<-recovery.all1  %>% filter((mgm=="ADAPTATION"&windcase=="w8"))
+rec
+
+example<-left_join(example,rec,by=c("model","rcp","mgm","windcase"))
+
+
+
+
+dsum2<-d %>% filter(year==50) %>% mutate(rel.wind.impact=100*wind/landscape_volume_yearstart) %>%
+  select(-year,-barkbeetle,-wind,-landscape_volume_yearstart,-impact,-relimpact)
+
+example<-left_join(example,dsum2,by=c("model","rcp","mgm","windcase"))
+
+
+
+
+#
+
+less %>%
+ # filter(model=="NCC_HIRHAM5"|model=="refclim",windcase=="w8",!is.na(r)) %>%
+  filter((mgm=="ADAPTATION"&windcase=="w8"),!is.na(r)) %>%
+  group_by(model, rcp, mgm, windcase) %>%
+  arrange(year_after_impact) %>%
+  mutate(  auc = auc(year_after_impact, r)) %>%
+  ggplot(aes(x = year_after_impact, y = r)) +
+  geom_ribbon(aes(ymin = r, ymax = 0), fill = "skyblue", alpha = 0.4) +
+  geom_line(color = "forestgreen") +
+  facet_grid(rcp~ model + mgm + windcase) +
+  labs(    x = "Years after impact",
+           y = "% difference of volume compared to pre-dist level"
+  ) +
+  geom_text(    data = example,
+                aes(x =40,              # position at right edge
+                    y =-45,              # position at top
+                    label =  paste("impact=",round(rel.wind.impact, 2))),
+                hjust = 1., vjust = 1.,
+                color = "blue", size = 3.5,
+                inherit.aes = FALSE  )+
+  geom_text(    data = example,
+                aes(x =40,              # position at right edge
+                    y =-55,              # position at top
+                    label =  paste("RT=",round(recovery.time, 2))),
+                hjust = 1., vjust = 1.,
+                color = "blue", size = 3.5,
+                inherit.aes = FALSE  )+
+  geom_text(    data = example,
+                aes(x =40,              # position at right edge
+                    y =-65,              # position at top
+                    label =  paste("AUC=",round(auc, 2))),
+                hjust = 1., vjust = 1.,
+                color = "blue", size = 3.5,
+                inherit.aes = FALSE  )+
+  geom_text(    data = example,
+                aes(x =40,              # position at right edge
+                    y =-75,              # position at top
+                    label =  paste0("normAUC=",round(norm.auc, 2))),
+                hjust = 1., vjust = 1.,
+                color = "blue", size = 3.5,
+                inherit.aes = FALSE  )+
+  geom_text(    data = example,
+                aes(x = 40,              # position at right edge
+                    y = -85,              # position at top
+                    label =  paste0("1-normAUC=",round(1-norm.auc, 2))),
+                hjust = 1., vjust = 1.,
+                color = "red", size = 3.5,
+                inherit.aes = FALSE  )+
+  xlim(0,50)+ylim(-100,0)+theme_bw()+
+  theme(
+   # panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+dev.off()
+
+
+
+
+
 #I want to put them all into one plot, coloring the resilience indicator
 
 
