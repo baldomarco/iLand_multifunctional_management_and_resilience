@@ -269,7 +269,7 @@ dev.off()
 to_plot<-left_join(l1,MF,by=c("model","mgm","windcase","rcp"))
 
 
-pdf(paste0(plotroot, "2d_Resilience_vs_MF_without_bars.pdf"), height = 8, width = 8)
+pdf(paste0(plotroot, "2d_Resilience_vs_MF_without_bars.pdf"), height = 6, width = 10)
 
 
 p_main<-ggplot(to_plot ,aes( score,   1-norm.auc ))+

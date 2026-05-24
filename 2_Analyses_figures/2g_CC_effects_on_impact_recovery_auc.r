@@ -73,10 +73,7 @@ diff2<-left_join(b1.long.scen,b1.long.ref, by=c("mgm", "name")) %>% mutate(diff=
 diff3<-diff2 %>%  select(mgm,name,rcp,diff.perc) %>% rename(mean_diff=diff.perc) %>% mutate(q25=NA,q75=NA)
 
 
-diff2 %>% filter(mgm=="ADAPTATION")
 
-dim(diff3)
-dim(sumdat)
 
 sumdat<-rbind(sumdat,diff3)
 
