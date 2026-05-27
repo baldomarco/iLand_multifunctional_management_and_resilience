@@ -103,7 +103,8 @@ pdf(paste0(plotroot,"2g_Column_graph_perc_diff_rt_impact_res.pdf"), width=10,hei
 print(g3)
 dev.off()
 
-
+f<-paste0("Output_summary_tables/generated_multi-functionality_tables/","2g_percentage_differences_20260527.csv")
+write.csv(sumdat,f)
 
 
 
