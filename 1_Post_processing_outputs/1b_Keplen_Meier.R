@@ -6,7 +6,7 @@ library(ggplot2)
 
 # Load data
 
-df<- read_csv("D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/Output_summary_tables/20260421_impact_recoverytime_auc.csv")
+df<- read_csv("C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/Output_summary_tables/20260421_impact_recoverytime_auc.csv")
 
 # ── 0. Parameters ─────────────────────────────────────────────────────────────
 sim_horizon <- 50
@@ -147,7 +147,7 @@ km_table<-as.data.frame(summary(km_rcp_mgm)$table)
 km_table<- km_table %>% mutate(median.ceiling =ceiling(km_table$median))
 
 
-write.csv(km_table,"D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/Output_summary_tables/1b_Median_recovery_timings.csv")
+write.csv(km_table,"C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/Output_summary_tables/1b_Median_recovery_timings.csv")
 
 
 
@@ -216,7 +216,7 @@ p$plot <- p$plot +
       
   )
 
-plotroot<-"D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/Figures/"
+plotroot<-"C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/Figures/"
 
 plot1<-paste0(plotroot,"1b_Keplen_Meier_interaction_median_only.pdf")
 plot2<-paste0(plotroot,"1b_Keplen_Meier_mgm.pdf")
@@ -241,7 +241,7 @@ print(g2)
 dev.off()
 
 
-write.csv(full_recovery,"D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/Output_summary_tables/1b_Full_recovery_timings.csv")
+write.csv(full_recovery,"C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/Output_summary_tables/1b_Full_recovery_timings.csv")
 
 fastest.fullrecov<-min(full_recovery$time)
 
