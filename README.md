@@ -8,7 +8,7 @@ We studied the effects of management and climate change on forest multifunctiona
 
 Additional contributors:
 
-Marco Baldo,
+Laura Dobor,
 
 Tomas Hlásny
 
