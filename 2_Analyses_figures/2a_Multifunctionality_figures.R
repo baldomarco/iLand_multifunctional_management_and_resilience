@@ -19,7 +19,7 @@ library(cowplot)
 
 
 
-setwd("D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/")
+setwd("C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/")
 
 dataroot<-"Output_summary_tables/"
 plotroot<-"Figures/"

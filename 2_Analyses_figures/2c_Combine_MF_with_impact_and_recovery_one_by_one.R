@@ -12,11 +12,10 @@ library(dplyr)
 library(ggplot2)
 library(gridExtra)   
 library(dplyr)
+library(patchwork)
 
 
-
-
-setwd("D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/")
+setwd("C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/")
 
 
 dataroot<-"Output_summary_tables/"
@@ -132,47 +131,52 @@ shared_ylim <- range(100 * to_plot$total / to_plot$landscape_volume_yearstart, n
 # List to store plots
 combined_plots <- list()
 
+# Define once outside the loop
+mgm_levels <- c("ADAPTATION", "BAU", "BIOECONOMY", "CONSERVATION", "UNMANAGED")
+mgm_colors <- c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")
+
+color_scale <- scale_color_manual(
+  values = setNames(mgm_colors, mgm_levels),
+  breaks = mgm_levels,  # forces all 5 in legend
+  drop = FALSE
+)
+
 for (rcp_val in rcp_levels) {
   df <- to_plot %>% filter(rcp == rcp_val)
   
-  # Prepare main plot
-  p_main_i <- ggplot(df ,aes(score, 100*total/landscape_volume_yearstart)) +
-    geom_point(aes(color = factor(mgm, levels=c("ADAPTATION","BAU","BIOECONOMY","CONSERVATION", "UNMANAGED"))), size = 2) +
+  p_main_i <- ggplot(df, aes(score, 100*total/landscape_volume_yearstart)) +
+    geom_point(aes(color = factor(mgm, levels = mgm_levels)), size = 2) +
     geom_smooth(method = "lm") +
     labs(x = "MF score", y = "Relative impact %", col = "mgm") +
-    scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")) +
+    color_scale +
     theme_bw() +
-    scale_x_continuous(limits = shared_xlim)+
-    scale_y_continuous(limits = shared_ylim)+
+    scale_x_continuous(limits = shared_xlim) +
+    scale_y_continuous(limits = shared_ylim) +
     theme(legend.position = "bottom",
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          strip.background = element_rect(fill = "white")) 
+          strip.background = element_rect(fill = "white"))
   
-  # Top range plot
   x_ranges_i <- df %>%
     group_by(mgm) %>%
     summarise(xmin = min(score), xmax = max(score), xmean = mean(score), xmedian = median(score), .groups = "drop")
   
-  p_top_i <- ggplot(x_ranges_i, aes(y = mgm, xmin = xmin, xmax = xmax, color = mgm)) +
-    geom_errorbarh(height = 0.5, lwd=0.5) +
+  p_top_i <- ggplot(x_ranges_i, aes(y = factor(mgm, levels = mgm_levels), xmin = xmin, xmax = xmax, color = mgm)) +
+    geom_errorbarh(height = 0.5, lwd = 0.5) +
     geom_point(aes(x = xmean)) +
     geom_point(aes(x = xmedian), pch = 2) +
-    scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")) +
+    color_scale +
     theme_minimal() +
-    scale_x_continuous(limits = shared_xlim)+
+    scale_x_continuous(limits = shared_xlim) +
     theme(
       legend.position = "none",
       axis.title = element_blank(),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.text.y = element_blank(),      # remove y labels
-      axis.ticks.y = element_blank(),     # remove y ticks
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
       panel.grid = element_blank(),
-      panel.border = element_rect(color = "black", fill = NA)  # box around panel
+      panel.border = element_rect(color = "black", fill = NA)
     )
   
-  # Right range plot
   y_ranges_i <- df %>%
     group_by(mgm) %>%
     summarise(ymin = min(100*total/landscape_volume_yearstart),
@@ -181,56 +185,33 @@ for (rcp_val in rcp_levels) {
               ymedian = median(100*total/landscape_volume_yearstart),
               .groups = "drop")
   
-  p_right_i <- ggplot(y_ranges_i, aes(x = mgm, ymin = ymin, ymax = ymax, color = mgm)) +
-    geom_errorbar(width = 0.5, lwd=0.5) +  # narrower
+  p_right_i <- ggplot(y_ranges_i, aes(x = factor(mgm, levels = mgm_levels), ymin = ymin, ymax = ymax, color = mgm)) +
+    geom_errorbar(width = 0.5, lwd = 0.5) +
     geom_point(aes(y = ymean)) +
     geom_point(aes(y = ymedian), pch = 2) +
-    scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")) +
-    scale_y_continuous(limits = shared_ylim)+
+    color_scale +
+    scale_y_continuous(limits = shared_ylim) +
     theme_minimal() +
     theme(
       legend.position = "none",
       axis.title = element_blank(),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.text.y = element_blank(),      # remove y labels
-      axis.ticks.y = element_blank(),     # remove y ticks
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
       panel.grid = element_blank(),
-      panel.border = element_rect(color = "black", fill = NA)  # box around panel
+      panel.border = element_rect(color = "black", fill = NA)
     )
   
-  if  (rcp_val!="rcp45") p_main_i <- p_main_i + theme(axis.title.x = element_blank(),legend.position = "none")
-  if  (rcp_val!="-") p_main_i <- p_main_i + theme(axis.title.y = element_blank())
+  if (rcp_val != "rcp45") p_main_i <- p_main_i + theme(axis.title.x = element_blank(), legend.position = "none")
+  if (rcp_val != "-")     p_main_i <- p_main_i + theme(axis.title.y = element_blank())
   
+  # Fix 2: parentheses around each patchwork before plot_layout
+  top_row  <- (p_top_i   + plot_spacer()) + plot_layout(widths  = c(6, 1))
+  main_row <- (p_main_i  + p_right_i)     + plot_layout(widths  = c(6, 1))
   
-  p_top_i_clean <- p_top_i + 
-    theme(plot.margin = margin(0, 0, 0, 0))
+  combined <- (top_row / main_row) + plot_layout(heights = c(1, 6))
   
-  p_main_i_clean <- p_main_i + 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  p_right_i_clean <- p_right_i + 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  # Row with no space between them
-  main_row <- p_main_i_clean + p_right_i_clean + 
-    plot_layout(widths = c(6, 1)) & 
-    theme(plot.margin = margin(0, 3, 0, 0))  # just in case
-  
-  # Do the same for the top row if needed
-  top_row <- p_top_i_clean + plot_spacer() + 
-    plot_layout(widths = c(6, 1)) & 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  # Combine vertically with no padding
-  combined <- top_row / main_row + 
-    plot_layout(heights = c(1, 8)) & 
-    theme(plot.margin = margin(0, 3, 0, 0))
-
   combined_plots[[rcp_val]] <- combined
 }
-
-
 
 final_plot <- wrap_plots(combined_plots, ncol = 3) 
 
@@ -256,100 +237,78 @@ shared_ylim <- range(to_plot$rt, na.rm = TRUE)
 # List to store plots
 combined_plots <- list()
 
+mgm_levels <- c("ADAPTATION", "BAU", "BIOECONOMY", "CONSERVATION", "UNMANAGED")
+mgm_colors <- c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")
+
+color_scale <- scale_color_manual(
+  values = setNames(mgm_colors, mgm_levels),
+  breaks = mgm_levels,
+  drop = FALSE
+)
+
 for (rcp_val in rcp_levels) {
   df <- to_plot %>% filter(rcp == rcp_val)
   
-  # Prepare main plot
-  p_main_i <- ggplot(df ,aes(score, rt)) +
-    geom_point(aes(color = factor(mgm, levels=c("ADAPTATION","BAU","BIOECONOMY","CONSERVATION", "UNMANAGED"))), size = 2) +
+  p_main_i <- ggplot(df, aes(score, rt)) +
+    geom_point(aes(color = factor(mgm, levels = mgm_levels)), size = 2) +
     geom_smooth(method = "lm") +
     labs(x = "MF score", y = "Recovery time [years]", col = "mgm") +
-    scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")) +
+    color_scale +
     theme_bw() +
-    scale_x_continuous(limits = shared_xlim)+
-    scale_y_continuous(limits = shared_ylim)+
+    scale_x_continuous(limits = shared_xlim) +
+    scale_y_continuous(limits = shared_ylim) +
     theme(legend.position = "bottom",
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          strip.background = element_rect(fill = "white")) 
+          strip.background = element_rect(fill = "white"))
   
-  # Top range plot
   x_ranges_i <- df %>%
     group_by(mgm) %>%
     summarise(xmin = min(score), xmax = max(score), xmean = mean(score), xmedian = median(score), .groups = "drop")
   
-  p_top_i <- ggplot(x_ranges_i, aes(y = mgm, xmin = xmin, xmax = xmax, color = mgm)) +
-    geom_errorbarh(height = 0.5, lwd=0.5) +
+  p_top_i <- ggplot(x_ranges_i, aes(y = factor(mgm, levels = mgm_levels), xmin = xmin, xmax = xmax, color = mgm)) +
+    geom_errorbarh(height = 0.5, lwd = 0.5) +
     geom_point(aes(x = xmean)) +
     geom_point(aes(x = xmedian), pch = 2) +
-    scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")) +
+    color_scale +
     theme_minimal() +
-    scale_x_continuous(limits = shared_xlim)+
+    scale_x_continuous(limits = shared_xlim) +
     theme(
       legend.position = "none",
       axis.title = element_blank(),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.text.y = element_blank(),      # remove y labels
-      axis.ticks.y = element_blank(),     # remove y ticks
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
       panel.grid = element_blank(),
-      panel.border = element_rect(color = "black", fill = NA)  # box around panel
+      panel.border = element_rect(color = "black", fill = NA)
     )
   
-  # Right range plot
   y_ranges_i <- df %>%
     group_by(mgm) %>%
-    summarise(ymin = min(rt),
-              ymax = max(rt),
-              ymean = mean(rt),
-              ymedian = median(rt),
-              .groups = "drop")
+    summarise(ymin = min(rt), ymax = max(rt), ymean = mean(rt), ymedian = median(rt), .groups = "drop")
   
-  p_right_i <- ggplot(y_ranges_i, aes(x = mgm, ymin = ymin, ymax = ymax, color = mgm)) +
-    geom_errorbar(width = 0.5, lwd=0.5) +  # narrower
+  p_right_i <- ggplot(y_ranges_i, aes(x = factor(mgm, levels = mgm_levels), ymin = ymin, ymax = ymax, color = mgm)) +
+    geom_errorbar(width = 0.5, lwd = 0.5) +
     geom_point(aes(y = ymean)) +
     geom_point(aes(y = ymedian), pch = 2) +
-    scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721")) +
-    scale_y_continuous(limits = shared_ylim)+
+    color_scale +
+    scale_y_continuous(limits = shared_ylim) +
     theme_minimal() +
     theme(
       legend.position = "none",
       axis.title = element_blank(),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.text.y = element_blank(),      # remove y labels
-      axis.ticks.y = element_blank(),     # remove y ticks
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
       panel.grid = element_blank(),
-      panel.border = element_rect(color = "black", fill = NA)  # box around panel
+      panel.border = element_rect(color = "black", fill = NA)
     )
   
-  if  (rcp_val!="rcp45") p_main_i <- p_main_i + theme(axis.title.x = element_blank(),legend.position = "none")
-  if  (rcp_val!="-") p_main_i <- p_main_i + theme(axis.title.y = element_blank())
+  if (rcp_val != "rcp45") p_main_i <- p_main_i + theme(axis.title.x = element_blank(), legend.position = "none")
+  if (rcp_val != "-")     p_main_i <- p_main_i + theme(axis.title.y = element_blank())
   
+  top_row  <- (p_top_i  + plot_spacer()) + plot_layout(widths  = c(6, 1))
+  main_row <- (p_main_i + p_right_i)     + plot_layout(widths  = c(6, 1))
   
-  p_top_i_clean <- p_top_i + 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  p_main_i_clean <- p_main_i + 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  p_right_i_clean <- p_right_i + 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  # Row with no space between them
-  main_row <- p_main_i_clean + p_right_i_clean + 
-    plot_layout(widths = c(6, 1)) & 
-    theme(plot.margin = margin(0, 3, 0, 0))  # just in case
-  
-  # Do the same for the top row if needed
-  top_row <- p_top_i_clean + plot_spacer() + 
-    plot_layout(widths = c(6, 1)) & 
-    theme(plot.margin = margin(0, 0, 0, 0))
-  
-  # Combine vertically with no padding
-  combined <- top_row / main_row + 
-    plot_layout(heights = c(1, 8)) & 
-    theme(plot.margin = margin(0, 3, 0, 0))
+  combined <- (top_row / main_row) + plot_layout(heights = c(1, 6))
   
   combined_plots[[rcp_val]] <- combined
 }

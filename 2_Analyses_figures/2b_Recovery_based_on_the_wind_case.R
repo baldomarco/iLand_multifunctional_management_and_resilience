@@ -16,7 +16,7 @@ library(gridExtra)
 
 
 
-setwd("D:/___PROJECTS/2025_iLand_management_study/04_work/3_analyses/")
+setwd("C:/Users/baldo/Documents/GitHub/iLand_management_and_resilience/")
 
 dataroot<-"Output_summary_tables/"
 plotroot<-"Figures/"
@@ -244,7 +244,7 @@ g4<-ggplot(recovery.all1 )+
   labs(x = "Years after the large windstorm",y="Volume difference compared to pre-dist level %",fill = "Agent")+
   # scale_fill_manual(values=(c("chocolate","grey" )))+
   facet_grid(mgm~rcp)+
-  scale_color_manual(values=(c("#4d9078", "#f2c14e", "#f78154",  "#b4436c", "#5fad56" )))+
+  scale_color_manual(values = c("#f2c14e", "chocolate", "black", "#62d75f", "#248721"))+
   ylim(-50,20)+
   geom_hline(yintercept=0, lty=2)+
   theme_bw()+
@@ -266,7 +266,7 @@ g5<-ggplot(rec ,aes( mgm,recovery.time , fill=mgm  ))+
   labs(x = "Management",y="Recovery time (years)",fill = "mgm")+
  # scale_fill_manual(values=(c("chocolate","grey" )))+
   facet_grid(windcase~rcp+model)+
-  scale_fill_manual(values=(c("#4d9078", "#f2c14e", "#f78154",  "#b4436c", "#5fad56" )))+
+  scale_fill_manual(values=(c("#f2c14e", "chocolate", "black",  "#62d75f", "#248721" )))+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
