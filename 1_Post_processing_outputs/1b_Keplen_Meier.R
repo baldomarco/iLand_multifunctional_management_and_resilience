@@ -57,11 +57,11 @@ df |> summarise(
 ) |> print()
 
 mgm_cols <- c(
-  "#4d9078",
   "#f2c14e",
-  "#f78154",
-  "#b4436c",
-  "#5fad56"
+  "chocolate",
+  "black",
+  "#62d75f",
+  "#248721"
 )
 
 rcp_cols <- c("#3a6ea5","#f2c14e","#f78154" )
